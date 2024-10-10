@@ -9,10 +9,17 @@ const geistSans = localFont({
   variable: "--font-geist-sans",
   weight: "100 900",
 });
+
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+
+const poppins = localFont({
+  src: "./fonts/poppins-regular-webfont.woff2", // Adjust this path according to where your Poppins font file is located
+  variable: "--font-poppins",
+  weight: "300 700", // Include the desired weight range
 });
 
 export const metadata: Metadata = {
@@ -28,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"

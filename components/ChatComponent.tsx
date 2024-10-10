@@ -47,7 +47,7 @@ const ChatComponent = ({ reportData }: Props) => {
           value={input}
           onChange={handleInputChange}
           placeholder="Type a message ..."
-          className="border-0 min-h-12 resize-none p-3 shadow-none focus:ring-0"
+          className="min-h-12 resize-none border-0 p-3 shadow-none focus-visible:ring-0"
         />
         <div className="flex items-center pt-0 p-3">
           <Button
