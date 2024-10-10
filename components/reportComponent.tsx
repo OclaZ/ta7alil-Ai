@@ -5,11 +5,15 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-type Props = {};
+type Props = {
+  onReportComfirmation: (data: string) => void;
+};
 
-const ReportComponent = (props: Props) => {
+const ReportComponent = ({ onReportComfirmation }: Props) => {
   const { toast } = useToast();
   const [base64Data, setBase64Data] = useState("");
+  const [reportData, setReportData] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   function handleReportSelection(event: ChangeEvent<HTMLInputElement>): void {
     if (!event.target.files) return;
     const file = event.target.files[0];
@@ -58,7 +62,7 @@ const ReportComponent = (props: Props) => {
     }
   }
 
-  async function extractDetails(): void {
+  async function extractDetails(): Promise<void> {
     if (!base64Data) {
       toast({
         description: "Please select a valid report",
@@ -66,6 +70,7 @@ const ReportComponent = (props: Props) => {
       });
       return;
     }
+    setIsLoading(true);
     const response = await fetch("/api/extractreportgemini", {
       method: "POST",
       headers: {
@@ -75,7 +80,8 @@ const ReportComponent = (props: Props) => {
     });
     if (response.ok) {
       const reportText = await response.text();
-      console.log(reportText);
+      setReportData(reportText);
+      setIsLoading(false);
     }
   }
 
@@ -83,14 +89,26 @@ const ReportComponent = (props: Props) => {
     <div className=" grid w-full items-start gap-6 overflow-auto p-4 pt-0">
       <fieldset className="relative grid gap-6 rounded-lg border p-4">
         <legend className="text-sm font-medium">Repport</legend>
+        {isLoading && (
+          <div className="absolute z-10 h-full w-full bg-card/90 rounded-lg flex items-center justify-center animate-fadeIn animate-pulse">
+            Loading...
+          </div>
+        )}
+
         <Input type="file" onChange={handleReportSelection} />
         <Button onClick={extractDetails}>1.Upload Report</Button>
         <Label>Repport summary</Label>
         <Textarea
           placeholder="extracted details from report will apear here . Get better recommendations by providing additional patient history and symptoms..."
           className="min-h-72 resize-none border-0 p-3 shadow-none "
+          value={reportData}
+          onChange={(e) => setReportData(e.target.value)}
         />
-        <Button variant={"destructive"} className="bg-[#cf1925]">
+        <Button
+          onClick={() => onReportComfirmation(reportData)}
+          variant={"destructive"}
+          className="bg-[#cf1925]"
+        >
           2.Looks good
         </Button>
       </fieldset>
