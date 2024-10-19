@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2, Upload, CheckCircle } from "lucide-react";
 
 type Props = {
   onReportComfirmation: (data: string) => void;
@@ -14,15 +15,17 @@ const ReportComponent = ({ onReportComfirmation }: Props) => {
   const [base64Data, setBase64Data] = useState("");
   const [reportData, setReportData] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [fileName, setFileName] = useState("");
+
   function handleReportSelection(event: ChangeEvent<HTMLInputElement>): void {
     if (!event.target.files) return;
     const file = event.target.files[0];
     if (file) {
+      setFileName(file.name);
       let isValidImage = false;
       let isValidDoc = false;
 
       const validImages = ["image/jpeg", "image/png", "image/webp"];
-
       const validDocs = ["application/pdf"];
 
       if (validImages.includes(file.type)) {
@@ -42,7 +45,6 @@ const ReportComponent = ({ onReportComfirmation }: Props) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           const fileContent = reader.result as string;
-          console.log(fileContent);
           setBase64Data(fileContent);
         };
         reader.readAsDataURL(file);
@@ -53,7 +55,6 @@ const ReportComponent = ({ onReportComfirmation }: Props) => {
           const reader = new FileReader();
           reader.onloadend = () => {
             const fileContent = reader.result as string;
-            console.log(fileContent);
             setBase64Data(fileContent);
           };
           reader.readAsDataURL(compressedFile);
@@ -71,45 +72,92 @@ const ReportComponent = ({ onReportComfirmation }: Props) => {
       return;
     }
     setIsLoading(true);
-    const response = await fetch("/api/extractreportgemini", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ base64: base64Data }),
-    });
-    if (response.ok) {
-      const reportText = await response.text();
-      setReportData(reportText);
+    try {
+      const response = await fetch("/api/extractreportgemini", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ base64: base64Data }),
+      });
+      if (response.ok) {
+        const reportText = await response.text();
+        setReportData(reportText);
+      } else {
+        throw new Error("Failed to extract report details");
+      }
+    } catch (error) {
+      toast({
+        description: "Error extracting report details",
+        variant: "destructive",
+      });
+      console.error(error);
+    } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <div className=" grid w-full items-start gap-6 overflow-auto p-4 pt-0">
-      <fieldset className="relative grid gap-6 rounded-lg border p-4">
-        <legend className="text-sm font-medium">Repport</legend>
+    <div className="grid w-full items-start gap-6 overflow-auto p-4 pt-0">
+      <fieldset className="relative grid gap-6 rounded-lg border border-border/40 p-6 shadow-sm">
+        <legend className="px-2 text-sm font-medium text-muted-foreground">
+          Report
+        </legend>
         {isLoading && (
-          <div className="absolute z-10 h-full w-full bg-card/90 rounded-lg flex items-center justify-center animate-fadeIn animate-pulse">
-            Loading...
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
 
-        <Input type="file" onChange={handleReportSelection} />
-        <Button onClick={extractDetails}>1.Upload Report</Button>
-        <Label>Repport summary</Label>
-        <Textarea
-          placeholder="extracted details from report will apear here . Get better recommendations by providing additional patient history and symptoms..."
-          className="min-h-72 resize-none border-0 p-3 shadow-none "
-          value={reportData}
-          onChange={(e) => setReportData(e.target.value)}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="file-upload" className="text-sm font-medium">
+            Upload Report
+          </Label>
+          <div className="flex items-center space-x-2">
+            <Input
+              id="file-upload"
+              type="file"
+              onChange={handleReportSelection}
+              className="hidden"
+            />
+            <Button
+              onClick={() => document.getElementById("file-upload")?.click()}
+              variant="outline"
+              className="w-full"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {fileName || "Choose file"}
+            </Button>
+            <Button
+              onClick={extractDetails}
+              disabled={!base64Data || isLoading}
+            >
+              Extract Details
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="report-summary" className="text-sm font-medium">
+            Report Summary
+          </Label>
+          <Textarea
+            id="report-summary"
+            placeholder="Extracted details from the report will appear here. Get better recommendations by providing additional patient history and symptoms..."
+            className="min-h-[200px] resize-none p-3"
+            value={reportData}
+            onChange={(e) => setReportData(e.target.value)}
+          />
+        </div>
+
         <Button
           onClick={() => onReportComfirmation(reportData)}
-          variant={"destructive"}
-          className="bg-[#cf1925]"
+          variant="default"
+          className="bg-primary hover:bg-primary/90"
+          disabled={!reportData}
         >
-          2.Looks good
+          <CheckCircle className="mr-2 h-4 w-4" />
+          Confirm Report
         </Button>
       </fieldset>
     </div>
@@ -117,6 +165,7 @@ const ReportComponent = ({ onReportComfirmation }: Props) => {
 };
 
 export default ReportComponent;
+
 function compressImage(file: File, callback: (compressedFile: File) => void) {
   const reader = new FileReader();
   reader.onload = (event: ProgressEvent<FileReader>) => {
